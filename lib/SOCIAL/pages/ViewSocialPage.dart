@@ -1,0 +1,348 @@
+import 'dart:ui';
+
+import 'package:personal/CARDS/model/PasswordModel.dart';
+import 'package:personal/SOCIAL/database/Database.dart';
+import 'package:personal/SOCIAL/model/SocialModel.dart';
+import 'package:personal/SOCIAL/pages/AddSocialPage.dart';
+import 'package:outline_material_icons/outline_material_icons.dart';
+import 'package:flutter/cupertino.dart';
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:encrypt/encrypt.dart' as encrypt;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:share/share.dart';
+import 'package:sqflite/utils/utils.dart';
+import 'SocialHomepage.dart';
+
+class ViewSocial extends StatefulWidget {
+  final Social social;
+
+  Function() triggerRefetch;
+  Social currentNote;
+  ViewSocial({Key key, this.social,Function() triggerRefetch,
+    Social currentNote}) : super(key: key){
+    this.triggerRefetch = triggerRefetch;
+    this.currentNote = currentNote;
+  }
+
+
+  //const ViewSocial({Key key, this.social}) : super(key: key);
+
+  @override
+  _ViewSocialState createState() => _ViewSocialState(social);
+}
+
+class _ViewSocialState extends State<ViewSocial> {
+  final Social social;
+  _ViewSocialState(this.social);
+
+  TextEditingController masterPassController = TextEditingController();
+
+  var scaffoldKey = GlobalKey<ScaffoldState>();
+
+  List<Icon> icons = [
+    Icon(Icons.account_circle, size: 28, color: Colors.white),
+    Icon(Icons.add, size: 28, color: Colors.white),
+    Icon(Icons.account_balance_wallet_rounded, size: 28, color: Colors.white),
+    Icon(Icons.add_business_sharp, size: 28, color: Colors.white),
+    Icon(Icons. analytics_sharp, size: 28, color: Colors.white),
+    Icon(Icons.account_balance, size: 28, color: Colors.white),
+    Icon(Icons.attach_email_sharp, size: 28, color: Colors.white),
+    Icon(Icons.chat, size: 28, color: Colors.white),
+    Icon(Icons.  credit_card_sharp , size: 28, color: Colors.white),
+    Icon(Icons. cloud_done_sharp, size: 28, color: Colors.white),
+  ];
+
+
+  List<String> iconNames = [
+    "Icon 1",
+    "Icon 2",
+    "Icon 3",
+    "Icon 4",
+    "Icon 5",
+    "Icon 6",
+    "Icon 7",
+    "Icon 8",
+    "Icon 9",
+    "Icon 10",
+  ];
+  bool decrypt = false;
+  String decrypted = "";
+  Color color;
+  int index;
+  Color hexToColor(String code) {
+    return new Color(int.parse(code.substring(1, 9), radix: 16) + 0xFF000000);
+  }
+
+  bool didAuthenticate = false;
+
+  authenticate() async {
+    var localAuth = LocalAuthentication();
+    didAuthenticate = await localAuth.authenticateWithBiometrics(
+        localizedReason: 'Please authenticate to view password',
+        stickyAuth: true);
+  }
+
+  Future<String> getMasterPass() async {
+    final storage = new FlutterSecureStorage();
+    String masterPass = await storage.read(key: 'master') ?? '';
+    return masterPass;
+  }
+
+  @override
+  void initState() {
+    print(social.color);
+    color = hexToColor(social.color);
+    index = iconNames.indexOf(social.icon);
+    authenticate();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var size = MediaQuery.of(context).size;
+    Color primaryColor = Theme.of(context).primaryColor;
+
+    return Scaffold(
+      key: scaffoldKey,
+      // backgroundColor: Colors.white,
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Container(
+              height: size.height * 0.3,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.only(
+                      bottomLeft: Radius.circular(30),
+                      bottomRight: Radius.circular(30))),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    icons[index],
+                    SizedBox(
+                      height: 12,
+                    ),
+                    Text(social.appName,
+                        style: TextStyle(
+                            fontFamily: "Title",
+                            fontSize: 32,
+                            color: Colors.white)),
+                  ],
+                ),
+              )),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(
+                    "Username",
+                    style: TextStyle(fontFamily: 'Title', fontSize: 20),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(8.0, 0, 8, 8),
+                  child: Text(
+                    social.userName,
+                    style: TextStyle(
+                      fontFamily: 'Subtitle',
+                      fontSize: 20,
+                      // color: Colors.black54
+                    ),
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            "Password",
+                            style: TextStyle(fontFamily: 'Title', fontSize: 20),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(8.0, 0, 8, 8),
+                          child: Text(
+                            decrypt ? decrypted : social.password,
+                            style: TextStyle(
+                              fontFamily: 'Subtitle',
+                              fontSize: 20,
+                              // color: Colors.black54
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () async {
+                        if (!decrypt && !didAuthenticate) {
+                          buildShowDialogBox(context);
+                        } else if (!decrypt && didAuthenticate) {
+                          String masterPass = await getMasterPass();
+                          decryptPass(social.password, masterPass);
+                        } else if (decrypt) {
+                          setState(() {
+                            decrypt = !decrypt;
+                          });
+                        }
+                      },
+                      icon: decrypt ? Icon(Icons.lock_open) : Icon(Icons.lock),
+                    )
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                child: Container(
+                  height: 80,
+                  color: Theme
+                      .of(context)
+                      .canvasColor
+                      .withOpacity(0.3),
+                  child: SafeArea(
+                    child: Row(
+                      children: <Widget>[
+                        IconButton(
+                          icon: Icon(Icons.arrow_back),
+                          onPressed: handleBack,
+                        ),
+                        IconButton(
+                          icon: Icon(OMIcons.share),
+                          onPressed: handleShare,
+                        ),
+                        IconButton(
+                          icon: Icon(OMIcons.edit),
+                          onPressed: handleEdit,
+                        ),
+                      ],
+                    ),
+                  ),
+                )),
+          )
+        ],
+      ),
+    );
+  }
+
+  Future buildShowDialogBox(BuildContext context) {
+    return showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Enter Master Password"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                "To decrypt the password enter your master password:",
+                style: TextStyle(fontFamily: 'Subtitle'),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  obscureText: true,
+                  maxLength: 32,
+                  decoration: InputDecoration(
+                      hintText: "Master Pass",
+                      hintStyle: TextStyle(fontFamily: "Subtitle"),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16))),
+                  controller: masterPassController,
+                ),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            FlatButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                decryptPass(
+                    social.password, masterPassController.text.trim());
+                masterPassController.clear();
+                if (!decrypt) {
+                  final snackBar = SnackBar(
+                    content: Text(
+                      'Wrong Master Password',
+                      style: TextStyle(fontFamily: "Subtitle"),
+                    ),
+                  );
+                  scaffoldKey.currentState.showSnackBar(snackBar);
+                }
+              },
+              child: Text("DONE"),
+            )
+          ],
+        );
+      },
+    );
+  }
+
+  decryptPass(String encryptedPass, String masterPass) {
+    String keyString = masterPass;
+    if (keyString.length < 32) {
+      int count = 32 - keyString.length;
+      for (var i = 0; i < count; i++) {
+        keyString += ".";
+      }
+    }
+
+    final iv = encrypt.IV.fromLength(16);
+    final key = encrypt.Key.fromUtf8(keyString);
+
+    try {
+      final encrypter = encrypt.Encrypter(encrypt.AES(key));
+      final d = encrypter.decrypt64(encryptedPass, iv: iv);
+      setState(() {
+        decrypted = d;
+        decrypt = true;
+      });
+    } catch (exception) {
+      setState(() {
+        decrypted = "Wrong Master Password";
+      });
+    }
+  }
+
+  void handleEdit() {
+    Navigator.pop(context);
+    Navigator.push(
+        context,
+        CupertinoPageRoute(
+            builder: (context) =>
+                AddSocial(
+                  existingNote: widget.currentNote,
+                  triggerRefetch: widget.triggerRefetch,
+                )));
+  }
+
+  void handleShare() {
+    Share.share(
+        '${social.appName.trim()}\n(On: ${social
+            .userName.trim()})\n\n${social.password.trim()}');
+  }
+  void handleBack() {
+    Navigator.pop(context);
+  }
+
+}
